@@ -71,12 +71,12 @@ if (cluster.isMaster) {
         }
     }
     class Projectile {
-        constructor(identifier, velocity, damage) {
+        constructor(identifier, position, velocity, damage) {
             this.id = identifier;
-            this.position = {};
+            this.position = new Position(position.x, position.y);
             this.angle = 0;
-            this.velocity = 0;
-            this.damage = 0;
+            this.velocity = velocity;
+            this.damage = damage;
         }
         toString() {
             return " id : " + this.id
@@ -177,7 +177,6 @@ if (cluster.isMaster) {
 
         var spaceS = new SpaceShip(socket.id, health, spawnPointSelection());
         spaceS.addWeapon(weaponsCatalog[0]);
-        console.log("new spaceShip", spaceS.toString());
         socket.player = spaceS;
 
         socket.emit("connected", { myself: socket.player, othersPlayers: players, projectiles: projectiles });
@@ -223,13 +222,14 @@ if (cluster.isMaster) {
 
         socket.on("shoot", function () {
             counterProjectile++;
-            var projectile = new Projectile(counterProjectile++, 10, 1);
-            projectile.position = socket.player.position;
+            var projectile = new Projectile(counterProjectile++, socket.player.position, socket.player.velocity + 10, 1);
             projectile.angle = socket.player.angle;
 
             // génère
             socket.emit("projectileEmitted", projectile);
             socket.broadcast.emit("newProjectileEmitted", projectile);
+
+            projectiles.push(projectile);
         });
 
         socket.moveInterval = setInterval(() => {
