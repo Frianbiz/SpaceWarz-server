@@ -186,28 +186,28 @@ if (cluster.isMaster) {
 
         socket.on("moveForward", function () {
             clearInterval(socket.player.velocityInterval);
-            socket.player.velocityInterval = setInterval(() => {
+            socket.player.velocityInterval = setInterval(function () {
                 socket.player.velocity += 0.001;
             });
         });
 
         socket.on("moveBackward", function () {
             clearInterval(socket.player.velocityInterval);
-            socket.player.velocityInterval = setInterval(() => {
+            socket.player.velocityInterval = setInterval(function () {
                 socket.player.velocity -= 0.001;
             });
         });
 
         socket.on("moveLeft", function () {
             clearInterval(socket.player.angleInterval);
-            socket.player.angleInterval = setInterval(() => {
+            socket.player.angleInterval = setInterval(function () {
                 socket.player.angle -= 0.02;
             }, frameMs);
         });
 
         socket.on("moveRight", function () {
             clearInterval(socket.player.angleInterval);
-            socket.player.angleInterval = setInterval(() => {
+            socket.player.angleInterval = setInterval(function () {
                 socket.player.angle += 0.02;
             }, frameMs);
         });
@@ -222,7 +222,7 @@ if (cluster.isMaster) {
 
         socket.on("shoot", function () {
             counterProjectile++;
-            var projectile = new Projectile(counterProjectile++, socket.player.position, socket.player.velocity + 10, 1);
+            var projectile = new Projectile(counterProjectile++, socket.player.position, socket.player.velocity + 5, 1);
             projectile.angle = socket.player.angle;
 
             // génère
@@ -232,15 +232,19 @@ if (cluster.isMaster) {
             projectiles.push(projectile);
         });
 
-        socket.moveInterval = setInterval(() => {
+        socket.moveInterval = setInterval(function () {
             if (socket.player.velocity !== 0) {
                 // caluler la nouvelle position
                 socket.player.position.x += Math.cos(socket.player.angle) * socket.player.velocity;
                 socket.player.position.y += Math.sin(socket.player.angle) * socket.player.velocity;
             }
-        }, frameMs)
+        }, frameMs);
 
-        socket.renderInterval = setInterval(() => {
+        socket.projectileInterval = setInterval(function () {
+
+        });
+
+        socket.renderInterval = setInterval(function () {
             io.emit('player.' + socket.player.id + ".moved", normalizePosition(socket.player));
         }, frameMs);
         /*
@@ -267,26 +271,22 @@ if (cluster.isMaster) {
 
     });
 
-    setInterval(function () {
 
-        // maj projectiles
-        projectiles.forEach(function (element) {
-            if (element.velocity !== 0) {
+    let projectileInterval = setInterval(function () {
+        projectiles.forEach((projectile) => {
+            if (projectile.velocity !== 0) {
                 // caluler la nouvelle position
-                element.position.x += Math.cos(element.angle) * element.velocity;
-                element.position.y += Math.sin(element.angle) * element.velocity;
+                projectile.position.x += Math.cos(projectile.angle) * projectile.velocity;
+                projectile.position.y += Math.sin(projectile.angle) * projectile.velocity;
+
+                io.emit('projectile.' + projectile.id + ".moved", normalizePosition(projectile));
             }
-            io.emit('projectile.' + element.id + ".moved", element);
-        }, this);
 
-        // io.emit('broadcast', updateData);
-    }, 200);
+        })
+    }, frameMs);
+
+
 }
-
-
-
-
-
 
 
 
