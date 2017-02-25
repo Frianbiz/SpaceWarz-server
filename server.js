@@ -146,6 +146,7 @@ if (cluster.isMaster) {
         new SpawnPoint(4, new Position(390, 390), 0)
     ];
 
+    var frameMs = 16.6666;
     /**
      *
      *  functions
@@ -185,19 +186,39 @@ if (cluster.isMaster) {
         players[counterPlayer - 1] = socket.player;
 
         socket.on("moveForward", function () {
-            socket.player.velocity += 2;
+            clearInterval(socket.player.velocityInterval);
+            socket.player.velocityInterval = setInterval(() => {
+                socket.player.velocity += 0.001;
+            });
         });
 
         socket.on("moveBackward", function () {
-            socket.player.velocity -= 2;
+            clearInterval(socket.player.velocityInterval);
+            socket.player.velocityInterval = setInterval(() => {
+                socket.player.velocity -= 0.001;
+            });
         });
 
         socket.on("moveLeft", function () {
-            socket.player.angle -= 5;
+            clearInterval(socket.player.angleInterval);
+            socket.player.angleInterval = setInterval(() => {
+                socket.player.angle -= 0.02;
+            }, frameMs);
         });
 
         socket.on("moveRight", function () {
-            socket.player.angle += 5;
+            clearInterval(socket.player.angleInterval);
+            socket.player.angleInterval = setInterval(() => {
+                socket.player.angle += 0.02;
+            }, frameMs);
+        });
+
+        socket.on("stopedMovedAngle", function () {
+            clearInterval(socket.player.angleInterval);
+        });
+
+        socket.on("stopedMovedVelocity", function () {
+            clearInterval(socket.player.velocityInterval);
         });
 
         socket.on("shoot", function () {
@@ -211,6 +232,17 @@ if (cluster.isMaster) {
             socket.broadcast.emit("newProjectileEmitted", projectile);
         });
 
+        socket.moveInterval = setInterval(() => {
+            if (socket.player.velocity !== 0) {
+                // caluler la nouvelle position
+                socket.player.position.x += Math.cos(socket.player.angle) * socket.player.velocity;
+                socket.player.position.y += Math.sin(socket.player.angle) * socket.player.velocity;
+            }
+        }, frameMs)
+
+        socket.renderInterval = setInterval(() => {
+            io.emit('player.' + socket.player.id + ".moved", normalizePosition(socket.player));
+        }, frameMs);
         /*
             EVENTS IMPLEMENTED :
             connected
@@ -237,16 +269,6 @@ if (cluster.isMaster) {
 
     setInterval(function () {
 
-        // maj players
-        players.forEach(function (element) {
-            if (element.velocity !== 0) {
-                // caluler la nouvelle position
-                element.position.x += Math.cos(element.angle) * element.velocity;
-                element.position.y += Math.sin(element.angle) * element.velocity;
-            }
-            io.emit('player.' + element.id + ".moved", element);
-        }, this);
-
         // maj projectiles
         projectiles.forEach(function (element) {
             if (element.velocity !== 0) {
@@ -259,4 +281,21 @@ if (cluster.isMaster) {
 
         // io.emit('broadcast', updateData);
     }, 200);
+}
+
+
+
+
+
+
+
+
+function normalizePosition(player) {
+    return {
+        position: {
+            x: parseInt(player.position.x),
+            y: parseInt(player.position.y),
+        },
+        angle: player.angle
+    }
 }
