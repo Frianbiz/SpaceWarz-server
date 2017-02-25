@@ -95,7 +95,7 @@ if (cluster.isMaster) {
     }
 
     class SpaceShip {
-        constructor(identifier, structurePoint, spawnPoint) {
+        constructor(identifier, structurePoint, spawnPoint, height, width) {
             this.id = identifier;
             this.position = spawnPoint.position;
             this.angle = spawnPoint.angle;
@@ -141,10 +141,11 @@ if (cluster.isMaster) {
      *
      **/
 
-    var projectilesCatalog = [
-        new Projectile(1, 10, 1),
-        new Projectile(2, 2, 10),
-    ];
+    // var projectilesCatalog = [
+    //     new Projectile(1, 10, 1),
+    //     new Projectile(counterProjectile++, socket.player.position, socket.player.velocity + 5, 1, 5, 5);
+    //     new Projectile(2, 2, 10),
+    // ];
 
     var weaponsCatalog = [
         new Weapon('machineGun'),
@@ -271,10 +272,12 @@ if (cluster.isMaster) {
             shoot
             projectileEmitted
             newProjectileEmitted
-            projectile.ID.dead
             projectile.ID.moved
-            player.ID.dead
+            projectile.ID.hit
+            projectile.ID.dead
+            player.ID.moved
             player.ID.hit
+            player.ID.dead
 
             NOT IMPLEMENTED :
 
@@ -292,7 +295,6 @@ if (cluster.isMaster) {
         });
     });
 
-
     let projectileInterval = setInterval(function () {
         projectiles.forEach((projectile) => {
             if (projectile.velocity !== 0) {
@@ -302,14 +304,14 @@ if (cluster.isMaster) {
 
                 players.forEach((player) => {
                     if (hitDetection(projectile, player)) {
-                        io.emit('projectile.' + projectile.id + ".dead");
+                        io.emit('projectile.' + projectile.id + ".hit");
                         player.ps -= projectile.damage;
                         if (player.ps < 1) {
                             io.emit('player.' + projectile.id + ".dead");
                         } else {
                             io.emit('player.' + projectile.id + ".hit", player.ps);
                         }
-                        break;
+                        return;
                     }
                 })
 
