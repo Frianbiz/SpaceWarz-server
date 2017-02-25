@@ -184,29 +184,6 @@ if (cluster.isMaster) {
 
         players[counterPlayer - 1] = socket.player;
 
-        /*
-            EVENTS IMPLEMENTED :
-            connected
-            newPlayerConnected
-            moveForward
-            moveBackward
-            moveLeft
-            moveRight
-
-            NOT IMPLEMENTED :
-            shoot
-            endOfFire
-            psChange
-            playerDeath
-
-            TODO :
-            OK - Add la liste des autres joueurs et des projectiles dans le retour de la premiere connection.
-            - Calculer les nouveaux déplacements
-            -
-
-        */
-
-        // récepetion
         socket.on("moveForward", function () {
             socket.player.velocity += 2;
         });
@@ -216,25 +193,46 @@ if (cluster.isMaster) {
         });
 
         socket.on("moveLeft", function () {
-            socket.player.angle += 10;
+            socket.player.angle -= 5;
         });
 
         socket.on("moveRight", function () {
-            socket.player.angle += 10;
+            socket.player.angle += 5;
         });
 
-
-
-        socket.on("shoot", function (data) {
+        socket.on("shoot", function () {
+            counterProjectile++;
+            var projectile = new Projectile(counterProjectile++, 10, 1);
+            projectile.position = socket.player.position;
+            projectile.angle = socket.player.angle;
 
             // génère
-            socket.emit("shoot", projecti);
-            socket.broadcast.emit("newPlayerConnected", socket.player);
-
-            //renvoie une la vélocité
+            socket.emit("projectileEmitted", projectile);
+            socket.broadcast.emit("newProjectileEmitted", projectile);
         });
 
-        // socket.emit("played", { matrice: MATRICE, player: socket.player });
+        /*
+            EVENTS IMPLEMENTED :
+            connected
+            newPlayerConnected
+            moveForward
+            moveBackward
+            moveLeft
+            moveRight
+            shoot
+            projectileEmitted
+            newProjectileEmitted
+
+            NOT IMPLEMENTED :
+            endOfFire
+            psChange
+            playerDeath
+
+            TODO :
+            OK - Add la liste des autres joueurs et des projectiles dans le retour de la premiere connection.
+            OK - Calculer les nouveaux déplacements
+        */
+
     });
 
     setInterval(function () {
