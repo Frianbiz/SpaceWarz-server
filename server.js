@@ -147,6 +147,7 @@ if (cluster.isMaster) {
     ];
 
     var frameMs = 16.6666;
+    var renderMs = 16.6666;
     /**
      *
      *  functions
@@ -242,7 +243,7 @@ if (cluster.isMaster) {
 
         socket.renderInterval = setInterval(() => {
             io.emit('player.' + socket.player.id + ".moved", normalizePosition(socket.player));
-        }, frameMs);
+        }, renderMs);
         /*
             EVENTS IMPLEMENTED :
             connected
@@ -265,7 +266,16 @@ if (cluster.isMaster) {
             OK - Calculer les nouveaux déplacements
         */
 
+        socket.on("disconnect", function () {
+            counterPlayer--;
+            clearInterval(socket.player.velocityInterval);
+            clearInterval(socket.moveInterval);
+            clearInterval(socket.renderInterval);
+
+        });
     });
+
+
 
     setInterval(function () {
 
@@ -298,4 +308,24 @@ function normalizePosition(player) {
         },
         angle: player.angle
     }
+}
+
+Object.prototype.clone = Array.prototype.clone = function () {
+    if (Object.prototype.toString.call(this) === '[object Array]') {
+        var clone = [];
+        for (var i = 0; i < this.length; i++)
+            clone[i] = this[i].clone();
+
+        return clone;
+    }
+    else if (typeof (this) == "object") {
+        var clone = {};
+        for (var prop in this)
+            if (this.hasOwnProperty(prop))
+                clone[prop] = this[prop].clone();
+
+        return clone;
+    }
+    else
+        return this;
 }
