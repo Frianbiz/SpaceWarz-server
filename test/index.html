@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>Socket.io</title>
+</head>
+
+<body>
+    <h1>Communication avec socket.io !</h1>
+    <div id="log"></div>
+    <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
+    <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
+    <script>
+        var socket = io.connect('http://localhost:8080');
+        var mySpaceShip = undefined;
+
+        socket.on('connected', function (data) {
+            mySpaceShip = data.myself;
+            console.log("connected :", data);
+            $('#log').append("connexion effectuée :" + data.details);
+        });
+        socket.on('update', function () {
+            console.log("update  received");
+            $('#log').append("update ");
+        });
+
+        socket.on('newPlayerConnected', function (data) {
+            console.log("update  received");
+            $('#log').append("<br> un nouveau joueur s'ai connecté : ", data);
+        });
+
+
+        $('#poke').click(function () {
+            socket.emit('tir', 'Salut serveur, ça va ?');
+        })
+    </script>
+
+</body>
+
+</html>
