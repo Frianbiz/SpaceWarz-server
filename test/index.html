@@ -8,9 +8,19 @@
 
 <body>
     <h1>Communication avec socket.io !</h1>
+    <p><input type="button" value="+" id="increaseVelocity" /></p>
+    <p><input type="button" value="-" id="reduceVelocity" /></p>
+    <p><input type="button" value="turn left" id="rotateMore" /></p>
+    <p><input type="button" value="turn right" id="rotateLess" /></p>
+
+    <p><input type="button" value="tir" id="shoot" /></p>
+
+
+
     <div id="log"></div>
     <script src="http://code.jquery.com/jquery-1.10.1.min.js"></script>
     <script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
+
     <script>
         var socket = io.connect('http://localhost:8080');
         var mySpaceShip = undefined;
@@ -18,11 +28,18 @@
         socket.on('connected', function (data) {
             mySpaceShip = data.myself;
             console.log("connected :", data);
-            $('#log').append("connexion effectuée :" + data.details);
+            $('#log').append("<br> connexion effectuée :" + data.details);
         });
-        socket.on('update', function () {
-            console.log("update  received");
-            $('#log').append("update ");
+        socket.on('broadcast', function (data) {
+            console.log("broadcast  received", data);
+            if (data.players.length > 0) {
+
+                $('#log').append("<br> update :");
+                data.players.forEach(function (element) {
+                    $('#log').append("<br> joueur :  " + element.id + " nouvelle coordonnées = " + element.position.x + " : " + element.position.y);
+                }, this);
+            }
+
         });
 
         socket.on('newPlayerConnected', function (data) {
@@ -31,8 +48,33 @@
         });
 
 
-        $('#poke').click(function () {
-            socket.emit('tir', 'Salut serveur, ça va ?');
+
+
+        /**
+         *
+         *  IHM Actions
+         *
+         **/
+
+        $('#increaseVelocity').click(function () {
+            socket.emit('move', { velocity: +2, angle: undefined });
+        })
+
+        $('#reduceVelocity').click(function () {
+            socket.emit('move', { velocity: -2, angle: undefined });
+        })
+
+        $('#rotateMore').click(function () {
+            socket.emit('move', { velocity: undefined, angle: +10 });
+        })
+
+        $('#rotateLess').click(function () {
+            socket.emit('move', { velocity: undefined, angle: -10 });
+        })
+
+        $('#shoot').click(function () {
+            alert('t a cru que j avais tout codé ??? ^^');
+            // socket.emit('shoot', 'Salut serveur, ça va ?');
         })
     </script>
 

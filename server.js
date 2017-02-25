@@ -17,9 +17,7 @@ if (cluster.isMaster) {
         cluster.fork();
     });
 
-}
-else {
-
+} else {
     // init server
     var express = require('express')
         , app = express()
@@ -48,6 +46,7 @@ else {
     var counterProjectile = 0;
     var nextSpawnPointToUsed = 1;
     var players = [];
+    var projectiles = [];
 
     class Position {
         constructor(x, y) {
@@ -68,7 +67,6 @@ else {
         toString() {
             return "Weapon : {"
                 + " name : " + this.name
-                + " damage : " + this.damage
                 + " }"
         }
     }
@@ -77,8 +75,8 @@ else {
             this.id = identifier;
             this.position = {};
             this.angle = 0;
-            this.velocity = undefined;
-            this.damage = undefined;
+            this.velocity = 0;
+            this.damage = 0;
         }
         toString() {
             return " id : " + this.id
@@ -97,7 +95,7 @@ else {
             this.structurePoint = structurePoint;
             this.weapons = [];
         }
-        get toString() {
+        toString() {
             return " id : " + this.id
                 + " position : " + this.position.toString()
                 + " angle : " + this.angle
@@ -130,25 +128,29 @@ else {
      *  CATALOGUES INITIALISATION
      *
      **/
-    // Projectiles
+
     var projectilesCatalog = [
         new Projectile(1, 10, 1),
         new Projectile(2, 2, 10),
     ];
 
-    // weapons
     var weaponsCatalog = [
         new Weapon('machineGun'),
         new Weapon('rockets'),
     ];
 
-    // spawn point
     var spawnPointCatalog = [
-        new SpawnPoint(1, new Position(10, -10), 0),
-        new SpawnPoint(2, new Position(390, -10), 0),
-        new SpawnPoint(3, new Position(10, -390), 0),
-        new SpawnPoint(4, new Position(390, -390), 0)
+        new SpawnPoint(1, new Position(10, 10), 0),
+        new SpawnPoint(2, new Position(390, 10), 0),
+        new SpawnPoint(3, new Position(10, 390), 0),
+        new SpawnPoint(4, new Position(390, 390), 0)
     ];
+
+    /**
+     *
+     *  functions
+     *
+     **/
 
     function spawnPointSelection() {
         var spawnPoint = spawnPointCatalog[nextSpawnPointToUsed - 1];
@@ -160,6 +162,7 @@ else {
         }
         return spawnPoint;
     }
+
     /**
      *
      *  SOCKET IO EVENTS
@@ -171,47 +174,91 @@ else {
         counterPlayer++;
         var health = 100;
 
-        var spawnP = spawnPointSelection();
-        var spaceS = new SpaceShip(counterPlayer, health, spawnP);
+        var spaceS = new SpaceShip(socket.id, health, spawnPointSelection());
         spaceS.addWeapon(weaponsCatalog[0]);
-        console.log("new spaceShip", spaceS);
         console.log("new spaceShip", spaceS.toString());
         socket.player = spaceS;
+
+        socket.emit("connected", { myself: socket.player, othersPlayers: players, projectiles: projectiles });
+        socket.broadcast.emit("newPlayerConnected", socket.player);
+
         players[counterPlayer - 1] = socket.player;
 
-        socket.emit("connected", { myself: socket.player, details: socket.player.toString() });
-        socket.broadcast("newPlayerConnected : ", socket.player.id);
+        /*
+            EVENTS IMPLEMENTED :
+            connected
+            newPlayerConnected
+            moveForward
+            moveBackward
+            moveLeft
+            moveRight
 
-        // events:
-        // connexion
-        // deplacement
-        // tir: return velocite
-        // finDeTir
-        // changementPV
-        // mortJoueur
+            NOT IMPLEMENTED :
+            shoot
+            endOfFire
+            psChange
+            playerDeath
+
+            TODO :
+            OK - Add la liste des autres joueurs et des projectiles dans le retour de la premiere connection.
+            - Calculer les nouveaux déplacements
+            -
+
+        */
 
         // récepetion
-        socket.on("move", function (data) {
-
-
-            //renvoie une confirmation avec les nouvelles coordonnées
+        socket.on("moveForward", function () {
+            socket.player.velocity += 2;
         });
 
+        socket.on("moveBackward", function () {
+            socket.player.velocity -= 2;
+        });
+
+        socket.on("moveLeft", function () {
+            socket.player.angle += 10;
+        });
+
+        socket.on("moveRight", function () {
+            socket.player.angle += 10;
+        });
+
+
+
         socket.on("shoot", function (data) {
+
+            // génère
+            socket.emit("shoot", projecti);
+            socket.broadcast.emit("newPlayerConnected", socket.player);
 
             //renvoie une la vélocité
         });
 
         // socket.emit("played", { matrice: MATRICE, player: socket.player });
-        //émission
-        // io.to(players.J.id).emit("endOfFire");
-        // io.to(players.J.id).emit("psChange");
-        // io.to(players.J.id).emit("playerDeath");
-
     });
 
     setInterval(function () {
-        // io.to(players[0]).emit("update");
-        // console.log("Update Emitted");
-    }, 16);
+
+        // maj players
+        players.forEach(function (element) {
+            if (element.velocity !== 0) {
+                // caluler la nouvelle position
+                element.position.x += Math.cos(element.angle) * element.velocity;
+                element.position.y += Math.sin(element.angle) * element.velocity;
+            }
+            io.emit('player.' + element.id + ".moved", element);
+        }, this);
+
+        // maj projectiles
+        projectiles.forEach(function (element) {
+            if (element.velocity !== 0) {
+                // caluler la nouvelle position
+                element.position.x += Math.cos(element.angle) * element.velocity;
+                element.position.y += Math.sin(element.angle) * element.velocity;
+            }
+            io.emit('projectile.' + element.id + ".moved", element);
+        }, this);
+
+        // io.emit('broadcast', updateData);
+    }, 200);
 }
