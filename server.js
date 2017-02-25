@@ -26,6 +26,7 @@ if (cluster.isMaster) {
         , readline = require('readline')
         , exec = require('child_process').exec
         , fs = require('fs');
+    var _ = require('lodash');
 
     var bodyParser = require('body-parser');
     app.use(bodyParser.json());
@@ -77,6 +78,8 @@ if (cluster.isMaster) {
             this.angle = 0;
             this.velocity = velocity;
             this.damage = damage;
+            this.lifeTime = 1000;
+            this.aliveFrom = 0;
         }
         toString() {
             return " id : " + this.id
@@ -290,38 +293,44 @@ if (cluster.isMaster) {
                 io.emit('projectile.' + projectile.id + ".moved", normalizePosition(projectile));
             }
 
+            if (projectile.aliveFrom > projectile.lifeTime) {
+                io.emit('projectile.' + projectile.id + ".dead");
+                _.remove(projectiles, { id: projectile.id });
+            } else {
+                projectile.aliveFrom += frameMs;
+            }
         })
     }, frameMs);
 
 
 }
 
-    function normalizePosition(player) {
-        return {
-            position: {
-                x: parseInt(player.position.x),
-                y: parseInt(player.position.y),
-            },
-            angle: player.angle
-        }
+function normalizePosition(player) {
+    return {
+        position: {
+            x: parseInt(player.position.x),
+            y: parseInt(player.position.y),
+        },
+        angle: player.angle
     }
+}
 
-    Object.prototype.clone = Array.prototype.clone = function () {
-        if (Object.prototype.toString.call(this) === '[object Array]') {
-            var clone = [];
-            for (var i = 0; i < this.length; i++)
-                clone[i] = this[i].clone();
+Object.prototype.clone = Array.prototype.clone = function () {
+    if (Object.prototype.toString.call(this) === '[object Array]') {
+        var clone = [];
+        for (var i = 0; i < this.length; i++)
+            clone[i] = this[i].clone();
 
-            return clone;
-        }
-        else if (typeof (this) == "object") {
-            var clone = {};
-            for (var prop in this)
-                if (this.hasOwnProperty(prop))
-                    clone[prop] = this[prop].clone();
-
-            return clone;
-        }
-        else
-            return this;
+        return clone;
     }
+    else if (typeof (this) == "object") {
+        var clone = {};
+        for (var prop in this)
+            if (this.hasOwnProperty(prop))
+                clone[prop] = this[prop].clone();
+
+        return clone;
+    }
+    else
+        return this;
+}
