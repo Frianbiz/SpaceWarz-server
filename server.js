@@ -72,7 +72,7 @@ if (cluster.isMaster) {
         }
     }
     class Projectile {
-        constructor(identifier, position, velocity, damage) {
+        constructor(identifier, position, velocity, damage, height, width) {
             this.id = identifier;
             this.position = new Position(position.x, position.y);
             this.angle = 0;
@@ -80,12 +80,17 @@ if (cluster.isMaster) {
             this.damage = damage;
             this.lifeTime = 1000;
             this.aliveFrom = 0;
+            this.height = height;
+            this.width = width;
         }
         toString() {
             return " id : " + this.id
                 + " pos : " + this.pos.toString()
                 + " angle : " + this.angle
                 + " velocity : " + this.velocity
+                + " damage : " + this.damage
+                + " height : " + this.height
+                + " width : " + this.width
         }
     }
 
@@ -97,6 +102,8 @@ if (cluster.isMaster) {
             this.velocity = 0;
             this.structurePoint = structurePoint;
             this.weapons = [];
+            this.height = height;
+            this.width = width;
         }
         toString() {
             return " id : " + this.id
@@ -105,6 +112,8 @@ if (cluster.isMaster) {
                 + " velocity : " + this.velocity
                 + " structurePoint : " + this.structurePoint
                 + " firstWeapon : " + this.weapons[0] !== undefined ? this.weapons[0].toString() : "no weapon"
+                + " height : " + this.height
+                + " width : " + this.width
         }
 
         addWeapon(weapon) {
@@ -179,7 +188,7 @@ if (cluster.isMaster) {
         counterPlayer++;
         var health = 100;
 
-        var spaceS = new SpaceShip(socket.id, health, spawnPointSelection());
+        var spaceS = new SpaceShip(socket.id, health, spawnPointSelection(), 85, 85);
         spaceS.addWeapon(weaponsCatalog[0]);
         socket.player = spaceS;
 
@@ -226,7 +235,7 @@ if (cluster.isMaster) {
 
         socket.on("shoot", function () {
             counterProjectile++;
-            var projectile = new Projectile(counterProjectile++, socket.player.position, socket.player.velocity + 5, 1);
+            var projectile = new Projectile(counterProjectile++, socket.player.position, socket.player.velocity + 5, 1, 5, 5);
             projectile.angle = socket.player.angle;
 
             // génère
@@ -262,11 +271,12 @@ if (cluster.isMaster) {
             shoot
             projectileEmitted
             newProjectileEmitted
+            projectile.ID.dead
+            projectile.ID.moved
+            player.ID.dead
+            player.ID.hit
 
             NOT IMPLEMENTED :
-            endOfFire
-            psChange
-            playerDeath
 
             TODO :
             OK - Add la liste des autres joueurs et des projectiles dans le retour de la premiere connection.
@@ -290,6 +300,19 @@ if (cluster.isMaster) {
                 projectile.position.x += Math.cos(projectile.angle) * projectile.velocity;
                 projectile.position.y += Math.sin(projectile.angle) * projectile.velocity;
 
+                players.forEach((player) => {
+                    if (hitDetection(projectile, player)) {
+                        io.emit('projectile.' + projectile.id + ".dead");
+                        player.ps -= projectile.damage;
+                        if (player.ps < 1) {
+                            io.emit('player.' + projectile.id + ".dead");
+                        } else {
+                            io.emit('player.' + projectile.id + ".hit", player.ps);
+                        }
+                        break;
+                    }
+                })
+
                 io.emit('projectile.' + projectile.id + ".moved", normalizePosition(projectile));
             }
 
@@ -301,8 +324,6 @@ if (cluster.isMaster) {
             }
         })
     }, frameMs);
-
-
 }
 
 function normalizePosition(player) {
@@ -313,6 +334,33 @@ function normalizePosition(player) {
         },
         angle: player.angle
     }
+}
+
+function hitDetection(projectile, ship) {
+    var hit, combinedHalfWidths, combinedHalfHeights, vx, vy;
+    hit = false;
+    projectile.centerX = projectile.position.x + projectile.width / 2;
+    projectile.centerY = projectile.position.y + projectile.height / 2;
+    ship.centerX = ship.position.x + ship.width / 2;
+    ship.centerY = ship.position.y + ship.height / 2;
+    projectile.halfWidth = projectile.width / 2;
+    projectile.halfHeight = projectile.height / 2;
+    ship.halfWidth = ship.width / 2;
+    ship.halfHeight = ship.height / 2;
+    vx = projectile.centerX - ship.centerX;
+    vy = projectile.centerY - ship.centerY;
+    combinedHalfWidths = projectile.halfWidth + ship.halfWidth;
+    combinedHalfHeights = projectile.halfHeight + ship.halfHeight;
+    if (Math.abs(vx) < combinedHalfWidths) {
+        if (Math.abs(vy) < combinedHalfHeights) {
+            hit = true;
+        } else {
+            hit = false;
+        }
+    } else {
+        hit = false;
+    }
+    return hit;
 }
 
 Object.prototype.clone = Array.prototype.clone = function () {
@@ -329,8 +377,9 @@ Object.prototype.clone = Array.prototype.clone = function () {
             if (this.hasOwnProperty(prop))
                 clone[prop] = this[prop].clone();
 
-        return clone;
     }
-    else
+    else {
         return this;
+    }
+    return clone;
 }
