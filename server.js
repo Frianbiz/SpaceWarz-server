@@ -72,7 +72,7 @@ if (cluster.isMaster) {
         }
     }
     class Projectile {
-        constructor(identifier, position, velocity, damage, height, width) {
+        constructor(identifier, position, velocity, damage, height, width, playerId) {
             this.id = identifier;
             this.position = new Position(position.x, position.y);
             this.angle = 0;
@@ -82,6 +82,7 @@ if (cluster.isMaster) {
             this.aliveFrom = 0;
             this.height = height;
             this.width = width;
+            this.playerId = playerId;
         }
         toString() {
             return " id : " + this.id
@@ -91,6 +92,7 @@ if (cluster.isMaster) {
                 + " damage : " + this.damage
                 + " height : " + this.height
                 + " width : " + this.width
+                + " playerId : " + this.playerId
         }
     }
 
@@ -236,7 +238,7 @@ if (cluster.isMaster) {
 
         socket.on("shoot", function () {
             counterProjectile++;
-            var projectile = new Projectile(counterProjectile++, socket.player.position, socket.player.velocity + 5, 1, 5, 5);
+            var projectile = new Projectile(counterProjectile++, socket.player.position, socket.player.velocity + 5, 10, 5, 5, socket.player.id);
             projectile.angle = socket.player.angle;
 
             // génère
@@ -301,17 +303,25 @@ if (cluster.isMaster) {
                 // caluler la nouvelle position
                 projectile.position.x += Math.cos(projectile.angle) * projectile.velocity;
                 projectile.position.y += Math.sin(projectile.angle) * projectile.velocity;
+                var test = true;
+
 
                 players.forEach((player) => {
-                    if (hitDetection(projectile, player)) {
+                    if (test && projectile.playerId !== player.id && hitDetection(projectile, player)) {
+                        console.log("hitDetection");
                         io.emit('projectile.' + projectile.id + ".hit");
-                        player.ps -= projectile.damage;
-                        if (player.ps < 1) {
-                            io.emit('player.' + projectile.id + ".dead");
+                        player.structurePoint -= projectile.damage;
+                        console.log("player.structurePoint : ", player.structurePoint);
+                        if (player.structurePoint < 1) {
+                            console.log("playerdead sended : ", player.id);
+                            io.emit('player.' + player.id + ".dead");
+                            _.remove(players, { id: player.id });
                         } else {
-                            io.emit('player.' + projectile.id + ".hit", player.ps);
+                            console.log("playerhit sended : ", player.id, player.str);
+                            io.emit('player.' + player.id + ".hit", player.structurePoint);
                         }
-                        return;
+                        _.remove(projectiles, { id: projectile.id });
+                        test = false;
                     }
                 })
 
